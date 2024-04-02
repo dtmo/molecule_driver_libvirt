@@ -1,0 +1,64 @@
+---
+- name: Destroy
+  hosts: localhost
+  connection: local
+  gather_facts: false
+  # no_log: "{{ molecule_no_log }}"
+  vars:
+    vms_dir: "{{ molecule_ephemeral_directory }}/vms"
+  tasks:
+    - name: Get VMs
+      community.libvirt.virt:
+        command: list_vms
+      register: list_vms_result
+
+    - name: Clear away VM
+      block:
+        - name: Shutdown VM
+          community.libvirt.virt:
+            name: "{{ item.name }}"
+            state: shutdown
+          when: item.name in list_vms_result.list_vms
+          loop: "{{ molecule_yml.platforms }}"
+
+        - name: Wait until VM status is shutdown
+          community.libvirt.virt:
+            command: status
+            name: "{{ item.name }}"
+          when: item.name in list_vms_result.list_vms
+          register: vm_status_result
+          until: vm_status_result.status == "shutdown"
+          retries: 60
+          delay: 1
+          loop: "{{ molecule_yml.platforms }}"
+
+      always:
+        - name: Undefine VM
+          community.libvirt.virt:
+            name: "{{ item.name }}"
+            command: undefine
+            force: true
+          when: item.name in list_vms_result.list_vms
+          loop: "{{ molecule_yml.platforms }}"
+
+        - name: Delete VM directory
+          ansible.builtin.file:
+            path: "{{ vms_dir }}/{{ item.name }}"
+            state: absent
+          loop: "{{ molecule_yml.platforms }}"
+
+    # Mandatory configuration for Molecule to function.
+
+    - name: Populate instance config
+      ansible.builtin.set_fact:
+        instance_conf: {}
+
+    - name: Dump instance config
+      ansible.builtin.copy:
+        content: |
+          # Molecule managed
+
+          {{ instance_conf | to_json | from_json | to_yaml }}
+        dest: "{{ molecule_instance_config }}"
+        mode: "0600"
+      when: server.changed | default(false) | bool  # noqa no-handler

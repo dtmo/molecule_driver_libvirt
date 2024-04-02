@@ -1,0 +1,28 @@
+[build-system]
+requires = [
+    "setuptools",
+    "setuptools-scm",
+]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "molecule_driver_libvirt"
+description = "Molecule driver to use Libvirt."
+version = "0.0.1"
+requires-python = ">=3.11"
+dependencies = [
+    "molecule>=24.2"
+]
+
+[project.optional-dependencies]
+tests = [
+    "pytest-helpers-namespace",
+    "molecule[test]",
+]
+
+[project.entry-points."molecule.driver"]
+libvirt = "molecule_driver_libvirt.driver:Libvirt"
+
+[tool.setuptools_scm]
+local_scheme = "no-local-version"
+write_to = "src/molecule_driver_libvirt/_version.py"

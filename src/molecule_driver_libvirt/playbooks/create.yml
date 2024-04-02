@@ -1,0 +1,222 @@
+---
+- name: Create
+  hosts: localhost
+  connection: local
+  gather_facts: false
+  # no_log: "{{ molecule_no_log }}"
+  vars:
+    vms_dir: "{{ molecule_ephemeral_directory }}/vms"
+  tasks:
+    - name: Create VMs directory
+      ansible.builtin.file:
+        path: "{{ vms_dir }}"
+        state: directory
+        recurse: true
+        mode: "0755"
+      loop: "{{ molecule_yml.platforms }}"
+
+    - name: Grant VMs dir access to libvirt-qemu
+      ansible.posix.acl:
+        path: "/{{ vms_dir.split('/')[1 : index + 3] | join('/') }}"
+        entity: libvirt-qemu
+        etype: user
+        permissions: x
+        state: present
+      loop: "{{ vms_dir.split('/')[1:-1] }}"
+      loop_control:
+        index_var: index
+
+    - name: Create VM directory
+      ansible.builtin.file:
+        path: "{{ vms_dir }}/{{ item.name }}"
+        state: directory
+        recurse: true
+        mode: "0755"
+      loop: "{{ molecule_yml.platforms }}"
+
+    - name: Grant VM directory access to libvirt-qemu
+      ansible.posix.acl:
+        path: "{{ vms_dir }}/{{ item.name }}"
+        entity: libvirt-qemu
+        etype: user
+        permissions: x
+        state: present
+      loop: "{{ molecule_yml.platforms }}"
+
+    - name: Copy VM image template to VM directory
+      ansible.builtin.copy:
+        src: "{{ item.template_path }}"
+        dest: "{{ vms_dir }}/{{ item.name }}/{{ item.name }}.qcow"
+        mode: "0644"
+      loop: "{{ molecule_yml.platforms }}"
+
+    - name: Create VM Cloud-Init config directory
+      ansible.builtin.file:
+        path: "{{ vms_dir }}/{{ item.name }}/CIDATA"
+        state: directory
+        mode: "0755"
+      loop: "{{ molecule_yml.platforms }}"
+
+    - name: Create VM Cloud-Init meta-data
+      ansible.builtin.template:
+        src: meta-data.yml.j2
+        dest: "{{ vms_dir }}/{{ item.name }}/CIDATA/meta-data"
+        mode: "0644"
+      vars:
+        instance_id: "{{ item.name }}"
+        hostname: "{{ item.name }}"
+      loop: "{{ molecule_yml.platforms }}"
+
+    - name: Create VM Cloud-Init user-data
+      ansible.builtin.template:
+        src: user-data.yml.j2
+        dest: "{{ vms_dir }}/{{ item.name }}/CIDATA/user-data"
+        mode: "0644"
+      vars:
+        ssh_user: "{{ item.ssh_user }}"
+        ssh_password: "{{ item.ssh_password }}"
+      loop: "{{ molecule_yml.platforms }}"
+
+    - name: Create CIDATA ISO
+      ansible.builtin.command:
+        cmd: >
+          xorriso
+            -outdev {{ vms_dir }}/{{ item.name }}/CIDATA.iso
+            -blank as_needed
+            -joliet on
+            -map {{ vms_dir }}/{{ item.name }}/CIDATA /
+            -volid "CIDATA"
+      changed_when: true
+      loop: "{{ molecule_yml.platforms }}"
+
+    - name: Create VM
+      community.libvirt.virt:
+        command: define
+        xml: "{{ lookup('template', 'domain.xml.j2') }}"
+      vars:
+        domain_name: "{{ item.name }}"
+        domain_metadata_os_id: http://ubuntu.com/ubuntu/22.04
+        domain_memory_mib: "{{ item.ram_mib }}"
+        domain_vcpus: "{{ item.vcpus }}"
+        domain_os_type_arch: x86_64
+        domain_os_type_machine: pc-q35-jammy
+        domain_disks:
+          - type: file
+            device: disk
+            driver:
+              type: qcow2
+            source:
+              file: "{{ vms_dir }}/{{ item.name }}/{{ item.name }}.qcow"
+            target:
+              dev: vda
+              bus: virtio
+          - type: file
+            device: cdrom
+            driver:
+              type: raw
+            source:
+              file: "{{ vms_dir }}/{{ item.name }}/CIDATA.iso"
+            target:
+              dev: sda
+              bus: sata
+      loop: "{{ molecule_yml.platforms }}"
+
+    - name: Start VM
+      community.libvirt.virt:
+        name: "{{ item.name }}"
+        state: running
+      loop: "{{ molecule_yml.platforms }}"
+
+    - name: Wait until VM status is running
+      community.libvirt.virt:
+        command: status
+        name: "{{ item.name }}"
+      until: vm_status_result.status == "running"
+      retries: 60
+      delay: 1
+      loop: "{{ molecule_yml.platforms }}"
+      register: vm_status_result
+
+    - name: Wait for QEMU guest agent availability
+      ansible.builtin.command:
+        cmd: virsh guestinfo --domain {{ item.name }}
+      changed_when: false
+      until: guestinfo_result is successful
+      retries: 60
+      delay: 1
+      loop: "{{ molecule_yml.platforms }}"
+      register: guestinfo_result
+
+    - name: Execute cloud-init --wait
+      ansible.builtin.command:
+        cmd: virsh qemu-agent-command {{ item.name }} '{{ qemu_agent_command | to_json }}'
+      vars:
+        qemu_agent_command:
+          execute: guest-exec
+          arguments:
+            path: cloud-init
+            arg:
+              - status
+              - --wait
+      changed_when: false
+      loop: "{{ molecule_yml.platforms }}"
+      register: cloud_init_wait_result
+
+    - name: Wait until cloud-init is done
+      ansible.builtin.command:
+        cmd: |
+          virsh qemu-agent-command {{ item.name }}
+          '{"execute":"guest-exec-status","arguments":{"pid":{{ (cloud_init_wait_result.results[index].stdout | from_json).return.pid }}}}'
+      changed_when: false
+      register: guest_exec_status_result
+      until: (guest_exec_status_result.stdout | from_json).return.exited
+      retries: 60
+      delay: 1
+      loop: "{{ molecule_yml.platforms }}"
+      loop_control:
+        index_var: index
+
+    - name: Fail if cloud-init is not successful
+      ansible.builtin.fail:
+        msg: "{{ guest_exec_status_result.stdout }}"
+      loop: "{{ molecule_yml.platforms }}"
+      loop_control:
+        index_var: index
+      when: (guest_exec_status_result.results[index].stdout | from_json).return.exitcode != 0
+
+    - name: Execute guest-network-get-interfaces
+      ansible.builtin.command:
+        cmd: virsh qemu-agent-command {{ item.name }} '{"execute":"guest-network-get-interfaces"}'
+      changed_when: false
+      loop: "{{ molecule_yml.platforms }}"
+      register: guest_network_get_interfaces_result
+
+    - name: Create instance config
+      block:
+        - name: Populate instance config dict  # noqa jinja
+          ansible.builtin.set_fact:
+            instance_conf_dict:
+              instance: "{{ item.name  }}"
+              address: "{{ (((guest_network_get_interfaces_result.results[index].stdout | from_json).return | selectattr('name', 'eq', 'eth0') | first)['ip-addresses'] | selectattr('ip-address-type', 'eq', 'ipv4') | first)['ip-address'] }}"
+              user: "{{ item.ssh_user }}"
+              password: "{{ item.ssh_password }}"
+              become_pass: "{{ item.ssh_password }}"
+              port: 22
+              # identity_file: "{{ }}"
+          loop: "{{ molecule_yml.platforms }}"
+          loop_control:
+            index_var: index
+          register: instance_config_dict
+
+        - name: Convert instance config dict to a list
+          ansible.builtin.set_fact:
+            instance_conf: "{{ instance_config_dict.results | map(attribute='ansible_facts.instance_conf_dict') | list }}"
+
+        - name: Dump instance config
+          ansible.builtin.copy:
+            content: |
+              # Molecule managed
+
+              {{ instance_conf | to_json | from_json | to_yaml }}
+            dest: "{{ molecule_instance_config }}"
+            mode: "0600"
