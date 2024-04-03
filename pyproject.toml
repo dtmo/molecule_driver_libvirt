@@ -11,7 +11,10 @@ description = "Molecule driver to use Libvirt."
 version = "0.0.1"
 requires-python = ">=3.11"
 dependencies = [
-    "molecule>=24.2"
+    "libvirt-python",
+    "lxml",
+    "molecule>=24.2",
+    "passlib",
 ]
 
 [project.optional-dependencies]

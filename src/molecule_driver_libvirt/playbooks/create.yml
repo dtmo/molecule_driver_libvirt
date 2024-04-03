@@ -15,7 +15,7 @@
         mode: "0755"
       loop: "{{ molecule_yml.platforms }}"
 
-    - name: Grant VMs dir access to libvirt-qemu
+    - name: Grant libvirt-qemu search permission on VMs dir
       ansible.posix.acl:
         path: "/{{ vms_dir.split('/')[1 : index + 3] | join('/') }}"
         entity: libvirt-qemu
@@ -34,7 +34,7 @@
         mode: "0755"
       loop: "{{ molecule_yml.platforms }}"
 
-    - name: Grant VM directory access to libvirt-qemu
+    - name: Grant libvirt-qemu search permission on VM directory
       ansible.posix.acl:
         path: "{{ vms_dir }}/{{ item.name }}"
         entity: libvirt-qemu
@@ -43,7 +43,7 @@
         state: present
       loop: "{{ molecule_yml.platforms }}"
 
-    - name: Copy VM image template to VM directory
+    - name: Copy VM disk image to VM directory
       ansible.builtin.copy:
         src: "{{ item.template_path }}"
         dest: "{{ vms_dir }}/{{ item.name }}/{{ item.name }}.qcow"

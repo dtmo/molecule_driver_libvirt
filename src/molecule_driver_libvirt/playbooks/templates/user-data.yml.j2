@@ -3,5 +3,5 @@ users:
   - name: {{ ssh_user }}
     groups: sudo
     lock_passwd: false
-    hashed_passwd: {{ ssh_password | ansible.builtin.password_hash }}
+    hashed_passwd: {{ ssh_password | ansible.builtin.password_hash('bcrypt') }}
     shell: /bin/bash
