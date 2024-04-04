@@ -1,0 +1,6 @@
+.venv/
+.vscode/
+dist/
+**/__pycache__/
+**/_version.py
+**/*.egg-info

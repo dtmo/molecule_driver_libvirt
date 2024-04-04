@@ -8,7 +8,7 @@ build-backend = "setuptools.build_meta"
 [project]
 name = "molecule_driver_libvirt"
 description = "Molecule driver to use Libvirt."
-version = "0.0.1"
+dynamic = ["version"]
 requires-python = ">=3.11"
 dependencies = [
     "libvirt-python",
@@ -25,6 +25,13 @@ tests = [
 
 [project.entry-points."molecule.driver"]
 libvirt = "molecule_driver_libvirt.driver:Libvirt"
+
+[tool.setuptools.package-data]
+molecule_driver_libvirt = [
+    "driver.json",
+    "playbooks/**.yml",
+    "playbooks/**.j2",
+]
 
 [tool.setuptools_scm]
 local_scheme = "no-local-version"
