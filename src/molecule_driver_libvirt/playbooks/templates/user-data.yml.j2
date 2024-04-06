@@ -1,7 +1,10 @@
 #cloud-config
 users:
   - name: {{ ssh_user }}
-    groups: sudo
-    lock_passwd: false
-    hashed_passwd: {{ ssh_password | ansible.builtin.password_hash('bcrypt') }}
+    lock_passwd: True
+    gecos: {{ ssh_user | capitalize }}
+    groups: [adm, audio, cdrom, dialout, dip, floppy, kvm, lxd, netdev, plugdev, sudo, video]
+    sudo: ["ALL=(ALL) NOPASSWD:ALL"]
     shell: /bin/bash
+    ssh_authorized_keys:
+      - {{ ssh_authorized_key }}

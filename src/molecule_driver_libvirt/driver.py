@@ -139,5 +139,6 @@ class Libvirt(Driver):
         """Return collections dict containing names and versions required."""
         return {
             "ansible.posix": "1.5.4",
+            "community.crypto": "2.18.0",
             "community.libvirt": "1.3.0",
         }

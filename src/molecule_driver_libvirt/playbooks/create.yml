@@ -43,6 +43,15 @@
         state: present
       loop: "{{ molecule_yml.platforms }}"
 
+    - name: Generate SSH keys
+      community.crypto.openssh_keypair:
+        path: "{{ vms_dir }}/{{ item.name }}/id_ssh_ed25519"
+        backend: cryptography
+        private_key_format: ssh
+        type: ed25519
+      loop: "{{ molecule_yml.platforms }}"
+      register: openssh_keypair_result
+
     - name: Copy VM disk image to VM directory
       ansible.builtin.copy:
         src: "{{ item.template_path }}"
@@ -74,8 +83,10 @@
         mode: "0644"
       vars:
         ssh_user: "{{ item.ssh_user }}"
-        ssh_password: "{{ item.ssh_password }}"
+        ssh_authorized_key: "{{ openssh_keypair_result.results[index].public_key }}"
       loop: "{{ molecule_yml.platforms }}"
+      loop_control:
+        index_var: index
 
     - name: Create CIDATA ISO
       ansible.builtin.command:
@@ -199,10 +210,8 @@
               instance: "{{ item.name  }}"
               address: "{{ (((guest_network_get_interfaces_result.results[index].stdout | from_json).return | selectattr('name', 'eq', 'eth0') | first)['ip-addresses'] | selectattr('ip-address-type', 'eq', 'ipv4') | first)['ip-address'] }}"
               user: "{{ item.ssh_user }}"
-              password: "{{ item.ssh_password }}"
-              become_pass: "{{ item.ssh_password }}"
               port: 22
-              # identity_file: "{{ }}"
+              identity_file: "{{ vms_dir }}/{{ item.name }}/id_ssh_ed25519"
           loop: "{{ molecule_yml.platforms }}"
           loop_control:
             index_var: index

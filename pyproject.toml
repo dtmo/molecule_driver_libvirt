@@ -11,6 +11,7 @@ description = "Molecule driver to use Libvirt."
 dynamic = ["version"]
 requires-python = ">=3.11"
 dependencies = [
+    "cryptography>=3.0",
     "libvirt-python",
     "lxml",
     "molecule>=24.2",
