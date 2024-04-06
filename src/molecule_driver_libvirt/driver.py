@@ -15,7 +15,7 @@ class Libvirt(Driver):
     def __init__(self, config=None) -> None:
         """Construct Libvirt."""
         super().__init__(config)
-        self._name = "libvirt"
+        self._name = "molecule_libvirt"
 
     @property
     def name(self):

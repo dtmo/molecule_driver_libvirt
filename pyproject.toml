@@ -24,7 +24,7 @@ tests = [
 ]
 
 [project.entry-points."molecule.driver"]
-libvirt = "molecule_driver_libvirt.driver:Libvirt"
+molecule_libvirt = "molecule_driver_libvirt.driver:Libvirt"
 
 [tool.setuptools.package-data]
 molecule_driver_libvirt = [
