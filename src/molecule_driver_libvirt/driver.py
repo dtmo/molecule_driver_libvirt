@@ -133,3 +133,11 @@ class Libvirt(Driver):
 
     def schema_file(self):
         return "driver.json"
+
+    @property
+    def required_collections(self) -> dict[str, str]:
+        """Return collections dict containing names and versions required."""
+        return {
+            "ansible.posix": "1.5.4",
+            "community.libvirt": "1.3.0",
+        }
