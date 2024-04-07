@@ -6,6 +6,7 @@
   # no_log: "{{ molecule_no_log }}"
   vars:
     vms_dir: "{{ molecule_ephemeral_directory }}/vms"
+    molecule_state: "{{ lookup('file', '/'.join([molecule_ephemeral_directory, 'state.yml'])) | from_yaml }}"
   tasks:
     - name: Get VMs
       community.libvirt.virt:
@@ -16,16 +17,16 @@
       block:
         - name: Request VM guest OS to shut down
           community.libvirt.virt:
-            name: "{{ item.name }}"
+            name: "{{ molecule_state.run_uuid }}_{{ item.name }}"
             state: shutdown
-          when: item.name in list_vms_result.list_vms
+          when: (molecule_state.run_uuid + "_" + item.name) in list_vms_result.list_vms
           loop: "{{ molecule_yml.platforms }}"
 
         - name: Wait for VM guest OS to shut down
           community.libvirt.virt:
             command: status
-            name: "{{ item.name }}"
-          when: item.name in list_vms_result.list_vms
+            name: "{{ molecule_state.run_uuid }}_{{ item.name }}"
+          when: (molecule_state.run_uuid + "_" + item.name) in list_vms_result.list_vms
           register: vm_status_result
           until: vm_status_result.status == "shutdown"
           retries: 60
@@ -35,10 +36,10 @@
       always:
         - name: Undefine VM
           community.libvirt.virt:
-            name: "{{ item.name }}"
+            name: "{{ molecule_state.run_uuid }}_{{ item.name }}"
             command: undefine
             force: true
-          when: item.name in list_vms_result.list_vms
+          when: (molecule_state.run_uuid + "_" + item.name) in list_vms_result.list_vms
           loop: "{{ molecule_yml.platforms }}"
 
         - name: Delete VM directory

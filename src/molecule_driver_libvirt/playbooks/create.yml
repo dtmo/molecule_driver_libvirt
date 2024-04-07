@@ -6,6 +6,7 @@
   # no_log: "{{ molecule_no_log }}"
   vars:
     vms_dir: "{{ molecule_ephemeral_directory }}/vms"
+    molecule_state: "{{ lookup('file', '/'.join([molecule_ephemeral_directory, 'state.yml'])) | from_yaml }}"
   tasks:
     - name: Create VMs directory
       ansible.builtin.file:
@@ -72,7 +73,7 @@
         dest: "{{ vms_dir }}/{{ item.name }}/CIDATA/meta-data"
         mode: "0644"
       vars:
-        instance_id: "{{ item.name }}"
+        instance_id: "{{ molecule_state.run_uuid }}_{{ item.name }}"
         hostname: "{{ item.name }}"
       loop: "{{ molecule_yml.platforms }}"
 
@@ -105,7 +106,7 @@
         command: define
         xml: "{{ lookup('template', 'domain.xml.j2') }}"
       vars:
-        domain_name: "{{ item.name }}"
+        domain_name: "{{ molecule_state.run_uuid }}_{{ item.name }}"
         domain_metadata_os_id: http://ubuntu.com/ubuntu/22.04
         domain_memory_mib: "{{ item.ram_mib }}"
         domain_vcpus: "{{ item.vcpus }}"
@@ -134,14 +135,14 @@
 
     - name: Start VM
       community.libvirt.virt:
-        name: "{{ item.name }}"
+        name: "{{ molecule_state.run_uuid }}_{{ item.name }}"
         state: running
       loop: "{{ molecule_yml.platforms }}"
 
     - name: Wait until VM status is running
       community.libvirt.virt:
         command: status
-        name: "{{ item.name }}"
+        name: "{{ molecule_state.run_uuid }}_{{ item.name }}"
       until: vm_status_result.status == "running"
       retries: 60
       delay: 1
@@ -150,7 +151,7 @@
 
     - name: Wait for QEMU guest agent availability
       ansible.builtin.command:
-        cmd: virsh guestinfo --domain {{ item.name }}
+        cmd: virsh guestinfo --domain '{{ molecule_state.run_uuid }}_{{ item.name }}'
       changed_when: false
       until: guestinfo_result is successful
       retries: 60
@@ -160,7 +161,7 @@
 
     - name: Execute cloud-init --wait
       ansible.builtin.command:
-        cmd: virsh qemu-agent-command {{ item.name }} '{{ qemu_agent_command | to_json }}'
+        cmd: virsh qemu-agent-command '{{ molecule_state.run_uuid }}_{{ item.name }}' '{{ qemu_agent_command | to_json }}'
       vars:
         qemu_agent_command:
           execute: guest-exec
@@ -176,7 +177,7 @@
     - name: Wait until cloud-init is done
       ansible.builtin.command:
         cmd: |
-          virsh qemu-agent-command {{ item.name }}
+          virsh qemu-agent-command '{{ molecule_state.run_uuid }}_{{ item.name }}'
           '{"execute":"guest-exec-status","arguments":{"pid":{{ (cloud_init_wait_result.results[index].stdout | from_json).return.pid }}}}'
       changed_when: false
       register: guest_exec_status_result
@@ -197,7 +198,7 @@
 
     - name: Execute guest-network-get-interfaces
       ansible.builtin.command:
-        cmd: virsh qemu-agent-command {{ item.name }} '{"execute":"guest-network-get-interfaces"}'
+        cmd: virsh qemu-agent-command '{{ molecule_state.run_uuid }}_{{ item.name }}' '{"execute":"guest-network-get-interfaces"}'
       changed_when: false
       loop: "{{ molecule_yml.platforms }}"
       register: guest_network_get_interfaces_result
@@ -207,7 +208,7 @@
         - name: Populate instance config dict  # noqa jinja
           ansible.builtin.set_fact:
             instance_conf_dict:
-              instance: "{{ item.name  }}"
+              instance: "{{ item.name }}"
               address: "{{ (((guest_network_get_interfaces_result.results[index].stdout | from_json).return | selectattr('name', 'eq', 'eth0') | first)['ip-addresses'] | selectattr('ip-address-type', 'eq', 'ipv4') | first)['ip-address'] }}"
               user: "{{ item.ssh_user }}"
               port: 22
