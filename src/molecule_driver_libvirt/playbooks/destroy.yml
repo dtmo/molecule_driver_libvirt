@@ -1,4 +1,5 @@
 ---
+# code: language=ansible
 - name: Destroy
   hosts: localhost
   connection: local
@@ -17,36 +18,36 @@
       block:
         - name: Request VM guest OS to shut down
           community.libvirt.virt:
-            name: "{{ molecule_state.run_uuid }}_{{ item.name }}"
+            name: "{{ molecule_state.run_uuid }}_{{ item }}"
             state: shutdown
-          when: (molecule_state.run_uuid + "_" + item.name) in list_vms_result.list_vms
-          loop: "{{ molecule_yml.platforms }}"
+          when: (molecule_state.run_uuid + "_" + item) in list_vms_result.list_vms
+          loop: "{{ groups['all'] }}"
 
         - name: Wait for VM guest OS to shut down
           community.libvirt.virt:
             command: status
-            name: "{{ molecule_state.run_uuid }}_{{ item.name }}"
-          when: (molecule_state.run_uuid + "_" + item.name) in list_vms_result.list_vms
+            name: "{{ molecule_state.run_uuid }}_{{ item }}"
+          when: (molecule_state.run_uuid + "_" + item) in list_vms_result.list_vms
           register: vm_status_result
           until: vm_status_result.status == "shutdown"
           retries: 60
           delay: 1
-          loop: "{{ molecule_yml.platforms }}"
+          loop: "{{ groups['all'] }}"
 
       always:
         - name: Undefine VM
           community.libvirt.virt:
-            name: "{{ molecule_state.run_uuid }}_{{ item.name }}"
+            name: "{{ molecule_state.run_uuid }}_{{ item }}"
             command: undefine
             force: true
-          when: (molecule_state.run_uuid + "_" + item.name) in list_vms_result.list_vms
-          loop: "{{ molecule_yml.platforms }}"
+          when: (molecule_state.run_uuid + "_" + item) in list_vms_result.list_vms
+          loop: "{{ groups['all'] }}"
 
         - name: Delete VM directory
           ansible.builtin.file:
-            path: "{{ vms_dir }}/{{ item.name }}"
+            path: "{{ vms_dir }}/{{ item }}"
             state: absent
-          loop: "{{ molecule_yml.platforms }}"
+          loop: "{{ groups['all'] }}"
 
     # Mandatory configuration for Molecule to function.
 
@@ -62,4 +63,4 @@
           {{ instance_conf | to_json | from_json | to_yaml }}
         dest: "{{ molecule_instance_config }}"
         mode: "0600"
-      when: server.changed | default(false) | bool  # noqa no-handler
+      when: server.changed | default(false) | bool # noqa no-handler
