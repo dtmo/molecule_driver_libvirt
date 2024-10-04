@@ -108,7 +108,7 @@
         xml: "{{ lookup('template', 'domain.xml.j2') }}"
       vars:
         domain_name: "{{ molecule_state.run_uuid }}_{{ item.name }}"
-        domain_metadata_os_id: http://ubuntu.com/ubuntu/22.04
+        domain_metadata_os_id: "{{ item.os_id }}"
         domain_memory_mib: "{{ item.ram_mib }}"
         domain_vcpus: "{{ item.vcpus }}"
         domain_os_type_arch: x86_64
