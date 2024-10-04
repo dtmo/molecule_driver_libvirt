@@ -1,10 +1,6 @@
 #cloud-config
-users:
-  - name: {{ ssh_user }}
-    lock_passwd: True
-    gecos: {{ ssh_user | capitalize }}
-    groups: [adm, audio, cdrom, dialout, dip, floppy, kvm, lxd, netdev, plugdev, sudo, video]
-    sudo: ["ALL=(ALL) NOPASSWD:ALL"]
-    shell: /bin/bash
-    ssh_authorized_keys:
-      - {{ ssh_authorized_key }}
+user:
+  name: {{ ssh_user }}
+  gecos: {{ ssh_user | capitalize }}
+  ssh_authorized_keys:
+    - {{ ssh_authorized_key }}
