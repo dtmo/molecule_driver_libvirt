@@ -200,10 +200,6 @@
       loop_control:
         index_var: index
 
-    - name: Dump guest_exec_status_result
-      ansible.builtin.debug:
-        var: guest_exec_status_result
-
     - name: Fail if cloud-init is not successful
       ansible.builtin.fail:
         msg: "{{ guest_exec_status_result.stdout }}"
