@@ -123,7 +123,7 @@
         domain_memory_mib: "{{ item.ram_mib }}"
         domain_vcpus: "{{ item.vcpus }}"
         domain_os_type_arch: x86_64
-        domain_os_type_machine: pc-q35-jammy
+        domain_os_type_machine: q35
         domain_disks:
           - type: file
             device: disk
