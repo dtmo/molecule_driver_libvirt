@@ -8,6 +8,8 @@
   vars:
     vms_dir: "{{ molecule_ephemeral_directory }}/vms"
     molecule_state: "{{ lookup('file', '/'.join([molecule_ephemeral_directory, 'state.yml'])) | from_yaml }}"
+    guest_network_interfaces: "{{ (guest_network_get_interfaces_result.results[index].stdout | from_json).return }}"
+    first_guest_network_interface: "{{ guest_network_interfaces | rejectattr('hardware-address', 'eq', '00:00:00:00:00:00') | first }}"
   tasks:
     - name: Create VMs directory
       ansible.builtin.file:
@@ -223,7 +225,7 @@
           ansible.builtin.set_fact:
             instance_conf_dict:
               instance: "{{ item.name }}"
-              address: "{{ (((guest_network_get_interfaces_result.results[index].stdout | from_json).return | selectattr('name', 'eq', 'eth0') | first)['ip-addresses'] | selectattr('ip-address-type', 'eq', 'ipv4') | first)['ip-address'] }}"
+              address: "{{ (first_guest_network_interface['ip-addresses'] | selectattr('ip-address-type', 'eq', 'ipv4') | first)['ip-address'] }}"
               user: "{{ item.ssh_user }}"
               port: 22
               identity_file: "{{ molecule_ephemeral_directory }}/id_ed25519"
