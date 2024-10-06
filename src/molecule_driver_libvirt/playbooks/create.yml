@@ -3,8 +3,6 @@
 - name: Create
   hosts: localhost
   connection: local
-  gather_facts: false
-  # no_log: "{{ molecule_no_log }}"
   vars:
     vms_dir: "{{ molecule_ephemeral_directory }}/vms"
     molecule_state: "{{ lookup('file', '/'.join([molecule_ephemeral_directory, 'state.yml'])) | from_yaml }}"
@@ -122,7 +120,7 @@
         domain_metadata_os_id: "{{ item.os_id }}"
         domain_memory_mib: "{{ item.ram_mib }}"
         domain_vcpus: "{{ item.vcpus }}"
-        domain_os_type_arch: x86_64
+        domain_os_type_arch: "{{ ansible_architecture }}"
         domain_os_type_machine: q35
         domain_disks:
           - type: file
