@@ -78,10 +78,10 @@
         hostname: "{{ item.name }}"
       loop: "{{ molecule_yml.platforms }}"
 
-    - name: Create VM Cloud-Init user-data
+    - name: Create VM Cloud-Init vendor-data
       ansible.builtin.template:
-        src: user-data.yml.j2
-        dest: "{{ vms_dir }}/{{ item.name }}/CIDATA/user-data"
+        src: vendor-data.yml.j2
+        dest: "{{ vms_dir }}/{{ item.name }}/CIDATA/vendor-data"
         mode: "0644"
       vars:
         ssh_user: "{{ item.ssh_user }}"
