@@ -90,6 +90,15 @@
       loop_control:
         index_var: index
 
+    - name: Create VM Cloud-Init user-data
+      ansible.builtin.copy:
+        content: "{{ item.user_data | default('') }}"
+        dest: "{{ vms_dir }}/{{ item.name }}/CIDATA/user-data"
+        mode: "0644"
+      loop: "{{ molecule_yml.platforms }}"
+      loop_control:
+        index_var: index
+
     - name: Create CIDATA ISO
       ansible.builtin.command:
         cmd: >
@@ -188,6 +197,10 @@
       loop: "{{ molecule_yml.platforms }}"
       loop_control:
         index_var: index
+
+    - name: Dump guest_exec_status_result
+      ansible.builtin.debug:
+        var: guest_exec_status_result
 
     - name: Fail if cloud-init is not successful
       ansible.builtin.fail:
