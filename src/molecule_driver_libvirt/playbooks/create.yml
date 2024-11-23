@@ -19,7 +19,7 @@
 
     - name: Grant libvirt-qemu search permission on VMs dir
       ansible.posix.acl:
-        path: "/{{ vms_dir.split('/')[1 : index + 3] | join('/') }}"
+        path: "/{{ vms_dir.split('/')[1 : index + (lookup('ansible.builtin.env', 'HOME').split('/') | length)] | join('/') }}"
         entity: libvirt-qemu
         etype: user
         permissions: x
