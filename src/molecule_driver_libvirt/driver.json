@@ -1,105 +1,123 @@
 {
-    "$defs": {
-      "MoleculeDriverModel": {
-        "properties": {
-          "name": {
-            "enum": ["libvirt"],
-            "title": "Name",
-            "type": "string"
-          },
-          "options": {
-            "$ref": "#/$defs/MoleculeDriverOptionsModel"
-          },
-          "safe_files": {
-            "items": {
-              "type": "string"
-            },
-            "title": "SafeFiles",
-            "type": "array"
-          },
-          "ssh_connection_options": {
-            "items": {
-              "type": "string"
-            },
-            "title": "SshConnectionOptions",
-            "type": "array"
-          }
-        },
-        "title": "MoleculeDriverModel",
-        "type": "object"
-      },
-      "MoleculeDriverOptionsModel": {
-        "additionalProperties": false,
-        "properties": {
-          "ansible_connection_options": {
-            "additionalProperties": {
-              "type": "string"
-            },
-            "title": "Ansible Connection Options",
-            "type": "object"
-          },
-          "login_cmd_template": {
-            "title": "Login Cmd Template",
-            "type": "string"
-          },
-          "managed": {
-            "title": "Managed",
-            "type": "boolean"
-          }
-        },
-        "title": "MoleculeDriverOptionsModel",
-        "type": "object"
-      },
-      "MoleculePlatformModel": {
-        "additionalProperties": true,
-        "properties": {
-          "box": {
-            "title": "Box",
-            "type": "string"
-          },
-          "children": {
-            "items": {
-              "type": "string"
-            },
-            "type": "array"
-          },
-          "groups": {
-            "items": {
-              "type": "string"
-            },
-            "title": "Groups",
-            "type": "array"
-          },
-          "hostname": {
-            "title": "Hostname",
-            "type": ["string", "boolean"]
-          },
-          "name": {
-            "title": "Name",
-            "type": "string"
-          }
-        },
-        "required": ["name"],
-        "title": "MoleculePlatformModel",
-        "type": "object"
-      }
-    },
-    "$id": "https://raw.githubusercontent.com/ansible-community/molecule/main/src/molecule/driver/driver.json",
-    "$schema": "http://json-schema.org/draft-07/schema",
-    "examples": ["molecule/*/molecule.yml"],
+    "$schema": "http://json-schema.org/draft-07/schema#",
+    "$id": "https://raw.githubusercontent.com/dtmo/molecule_driver_libvirt/refs/heads/main/src/molecule_driver_libvirt/driver.json",
+    "type": "object",
+    "title": "Molecule libvirt Driver Schema",
     "properties": {
-      "driver": {
-        "$ref": "#/$defs/MoleculeDriverModel"
-      },
-      "platforms": {
-        "items": {
-          "$ref": "#/$defs/MoleculePlatformModel"
-        },
-        "title": "Platforms",
-        "type": "array"
-      }
+        "driver": {
+            "$ref": "#/definitions/MoleculeLibvirtDriverModel"
+        }
     },
-    "required": ["driver"],
-    "title": "Molecule Delegated Driver Schema",
-    "type": "object"
-  }
+    "definitions": {
+        "MoleculeLibvirtDriverModel": {
+            "type": "object",
+            "title": "Molecule Libvirt Driver Model",
+            "properties": {
+                "name": {
+                    "type": "string",
+                    "title": "Driver Name",
+                    "description": "Name of the Molecule driver implementation",
+                    "enum": [
+                        "molecule_libvirt"
+                    ]
+                },
+                "libvirt_uri": {
+                    "type": "string",
+                    "title": "Libvirt connection URI",
+                    "description": "The connection URI for libvirt to use to connect to the underlying hypervisor",
+                    "default": "qemu:///system"
+                },
+                "defaults": {
+                    "$ref": "#/definitions/MoleculeLibvirtInstanceModel"
+                }
+            },
+            "required": [
+                "name"
+            ]
+        },
+        "MoleculeLibvirtDriverOptionsModel": {
+            "type": "object",
+            "title": "Molecule Driver Options Model",
+            "properties": {
+                "ansible_connection_options": {
+                    "additionalProperties": {
+                        "type": "string"
+                    },
+                    "title": "Ansible Connection Options",
+                    "type": "object"
+                },
+                "login_cmd_template": {
+                    "title": "Login Cmd Template",
+                    "type": "string"
+                },
+                "managed": {
+                    "title": "Managed",
+                    "type": "boolean"
+                }
+            },
+            "additionalProperties": false
+        },
+        "MoleculeLibvirtInstanceModel": {
+            "type": "object",
+            "title": "Instance Model",
+            "description": "Default configuration values to apply to all platforms",
+            "properties": {
+                "disk_file_path": {
+                    "type": "string",
+                    "title": "Disk file path",
+                    "description": "The path to the QCOW2 disk file to use as the backing file for the VM disk."
+                },
+                "os_id": {
+                    "type": "string",
+                    "title": "Operating system ID",
+                    "description": "The libosinfo OS ID of the guest operating system."
+                },
+                "ssh_user": {
+                    "type": "string",
+                    "title": "SSH user",
+                    "description": "The name of the SSH user to configure for connections to the VM."
+                },
+                "ram_mib": {
+                    "type": "number",
+                    "title": "RAM MiB",
+                    "description": "The amount of RAM to configure in mebibytes."
+                },
+                "vcpus": {
+                    "type": "number",
+                    "title": "vCPUs",
+                    "description": "The number of virtual CPUs to configure."
+                },
+                "disk_size": {
+                    "type": "string",
+                    "title": "Disk size",
+                    "description": "The size of the disk as a number and unit, such as `100G`. Valid units are: `b` or `bytes` for bytes, `KB` for kilobytes, `KiB` for kibibytes, `MB` for megabytes, `M` or `MiB` for mebibytes, `GB` for gigabytes, `G` or `GiB` for gibibytes, `TB` for terabytes, `T` or `TiB` for tebibytes."
+                }
+            },
+            "additionalProperties": false
+        },
+        "MoleculePlatformModel": {
+            "type": "object",
+            "title": "Molecule Platform Model",
+            "anyOf": [
+                {
+                    "properties": {
+                        "name": {
+                            "title": "Name",
+                            "type": "string"
+                        }
+                    },
+                    "required": [
+                        "name"
+                    ]
+                },
+                {
+                    "$ref": "#/definitions/MoleculeLibvirtInstanceModel"
+                }
+            ],
+            "required": [
+                "name"
+            ],
+            "additionalProperties": true
+        }
+    }
+}

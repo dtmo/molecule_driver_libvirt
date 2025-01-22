@@ -57,12 +57,19 @@ configuration found in: <https://github.com/dtmo/molecule_ubuntu_2404>.
 
 ## Configuration
 
-Each platform has the following configuration properties:
+### Libvirt connection URI
 
-* `name`: (required) The name of the host to create. This is set as the guest
-  hostname, and combined with the Molecule state `run_uuid` value to create a
-  unique VM name.
-* `template_path`: (required) The path to the QCOW2 template to use as the
+The `molecule_libvirt` driver supports an option to specify the `libvirt_uri`,
+which will override the connection URI used by libvirt connections created by
+the Molecule driver from the default value of: `qemu:///system`.
+
+See: <https://libvirt.org/uri.html>
+
+### Platform defaults
+
+The driver also supports specifying `defaults` which can take the following:
+
+* `disk_file_path`: (required) The path to the QCOW2 disk file to use as the
   backing file for the VM disk.
 * `os_id`: (required) The [libosinfo](https://libosinfo.org/) OS ID of the guest
   operating system. The supported values are available in the
@@ -93,17 +100,34 @@ Each platform has the following configuration properties:
 * `vcpus`: (required) The number of vCPUs.
 * `user_data`: (optional) Cloud-init user data to provide to the VM guest OS.
 
+### Platform configuration
+
+Each platform has the following configuration properties:
+
+* `name`: (required) The name of the host to create. This is set as the guest
+  hostname, and combined with the Molecule state `run_uuid` value to create a
+  unique VM name.
+* All values supported as driver platform defaults. When a value is specified as
+  a platform value it will override a default specified in the driver.
+
 ## Example `molecule.yml`
 
 ```yaml
 driver:
   name: molecule_libvirt
-platforms:
-  - name: instance
-    template_path: "{{ ubuntu_2404_qcow2_image_path }}"
+  libvirt_uri: qemu+libssh2://user@host/system?known_hosts=/home/user/.ssh/known_hosts
+  defaults:
+    disk_file_path: "{{ ubuntu_2404_qcow2_image_path }}"
     os_id: http://ubuntu.com/ubuntu/24.04
     ssh_user: ansible
-    disk_size: 100G
+    disk_size: 50G
     ram_mib: 4096
     vcpus: 2
+platforms:
+  - name: instance
+  - name: big_instance
+    disk_size: 500G
+    ram_mib: 16384
+    vcpus: 16
+
 ```

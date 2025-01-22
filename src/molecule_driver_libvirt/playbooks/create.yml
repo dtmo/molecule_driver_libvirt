@@ -8,6 +8,23 @@
     molecule_state: "{{ lookup('file', '/'.join([molecule_ephemeral_directory, 'state.yml'])) | from_yaml }}"
     guest_network_interfaces: "{{ (guest_network_get_interfaces_result.results[index].stdout | from_json).return }}"
     first_guest_network_interface: "{{ guest_network_interfaces | rejectattr('hardware-address', 'eq', '00:00:00:00:00:00') | first }}"
+
+    libvirt_uri: "{{ molecule_yml.driver.libvirt_uri | default('qemu:///system') }}"
+
+    driver_defaults: "{{ molecule_yml.driver.defaults | default({}) }}"
+    default_disk_file_path: "{{ driver_defaults.disk_file_path | default(undef('Platform disk_file_path must be specified')) }}"
+    default_os_id: "{{ driver_defaults.os_id | default(undef('Platform os_id must be specified')) }}"
+    default_ssh_user: "{{ driver_defaults.ssh_user | default(undef('Platform ssh_user must be specified')) }}"
+    default_ram_mib: "{{ driver_defaults.ram_mib | default(undef('Platform ram_mib must be specified')) }}"
+    default_vcpus: "{{ driver_defaults.vcpus | default(undef('Platform vcpus must be specified')) }}"
+    default_disk_size: "{{ driver_defaults.disk_size | default(undef()) }}"
+
+    platform_disk_file_path: "{{ item.disk_file_path | default(default_disk_file_path) }}"
+    platform_os_id: "{{ item.os_id | default(default_os_id) }}"
+    platform_ssh_user: "{{ item.ssh_user | default(default_ssh_user) }}"
+    platform_ram_mib: "{{ item.ram_mib | default(default_ram_mib) }}"
+    platform_vcpus: "{{ item.vcpus | default(default_vcpus) }}"
+    platform_disk_size: "{{ item.disk_size | default(default_disk_size) }}"
   tasks:
     - name: Create VMs directory
       ansible.builtin.file:
@@ -59,9 +76,9 @@
         cmd: >
           qemu-img create
           -f qcow2
-          -b "{{ item.template_path }}"
+          -b "{{ platform_disk_file_path }}"
           -F qcow2 "{{ vms_dir }}/{{ item.name }}/{{ item.name }}.qcow"
-          {{ item.disk_size if item.disk_size is defined else '' }}
+          {{ platform_disk_size if platform_disk_size is defined else '' }}
       changed_when: true
       loop: "{{ molecule_yml.platforms }}"
 
@@ -88,7 +105,7 @@
         dest: "{{ vms_dir }}/{{ item.name }}/CIDATA/vendor-data"
         mode: "0644"
       vars:
-        ssh_user: "{{ item.ssh_user }}"
+        ssh_user: "{{ platform_ssh_user }}"
         ssh_authorized_key: "{{ openssh_keypair_result.public_key }}"
       loop: "{{ molecule_yml.platforms }}"
       loop_control:
@@ -117,13 +134,14 @@
 
     - name: Create VM
       community.libvirt.virt:
+        uri: "{{ libvirt_uri }}"
         command: define
         xml: "{{ lookup('template', 'domain.xml.j2') }}"
       vars:
         domain_name: "{{ molecule_state.run_uuid }}_{{ item.name }}"
-        domain_metadata_os_id: "{{ item.os_id }}"
-        domain_memory_mib: "{{ item.ram_mib }}"
-        domain_vcpus: "{{ item.vcpus }}"
+        domain_metadata_os_id: "{{ platform_os_id }}"
+        domain_memory_mib: "{{ platform_ram_mib }}"
+        domain_vcpus: "{{ platform_vcpus }}"
         domain_os_type_arch: "{{ ansible_architecture }}"
         domain_os_type_machine: q35
         domain_disks:
@@ -149,12 +167,14 @@
 
     - name: Start VM
       community.libvirt.virt:
+        uri: "{{ libvirt_uri }}"
         name: "{{ molecule_state.run_uuid }}_{{ item.name }}"
         state: running
       loop: "{{ molecule_yml.platforms }}"
 
     - name: Wait until VM status is running
       community.libvirt.virt:
+        uri: "{{ libvirt_uri }}"
         command: status
         name: "{{ molecule_state.run_uuid }}_{{ item.name }}"
       until: vm_status_result.status == "running"
@@ -165,7 +185,7 @@
 
     - name: Wait for QEMU guest agent availability
       ansible.builtin.command:
-        cmd: virsh guestinfo --domain '{{ molecule_state.run_uuid }}_{{ item.name }}'
+        cmd: virsh --connect '{{ libvirt_uri }}' guestinfo --domain '{{ molecule_state.run_uuid }}_{{ item.name }}'
       changed_when: false
       until: guestinfo_result is successful
       retries: 60
@@ -175,7 +195,7 @@
 
     - name: Execute cloud-init --wait
       ansible.builtin.command:
-        cmd: virsh qemu-agent-command '{{ molecule_state.run_uuid }}_{{ item.name }}' '{{ qemu_agent_command | to_json }}'
+        cmd: virsh --connect '{{ libvirt_uri }}' qemu-agent-command '{{ molecule_state.run_uuid }}_{{ item.name }}' '{{ qemu_agent_command | to_json }}'
       vars:
         qemu_agent_command:
           execute: guest-exec
@@ -191,7 +211,7 @@
     - name: Wait until cloud-init is done
       ansible.builtin.command:
         cmd: |
-          virsh qemu-agent-command '{{ molecule_state.run_uuid }}_{{ item.name }}'
+          virsh --connect '{{ libvirt_uri }}' qemu-agent-command '{{ molecule_state.run_uuid }}_{{ item.name }}'
           '{"execute":"guest-exec-status","arguments":{"pid":{{ (cloud_init_wait_result.results[index].stdout | from_json).return.pid }}}}'
       changed_when: false
       register: guest_exec_status_result
@@ -212,7 +232,7 @@
 
     - name: Execute guest-network-get-interfaces
       ansible.builtin.command:
-        cmd: virsh qemu-agent-command '{{ molecule_state.run_uuid }}_{{ item.name }}' '{"execute":"guest-network-get-interfaces"}'
+        cmd: virsh --connect '{{ libvirt_uri }}' qemu-agent-command '{{ molecule_state.run_uuid }}_{{ item.name }}' '{"execute":"guest-network-get-interfaces"}'
       changed_when: false
       loop: "{{ molecule_yml.platforms }}"
       register: guest_network_get_interfaces_result
@@ -224,7 +244,7 @@
             instance_conf_dict:
               instance: "{{ item.name }}"
               address: "{{ (first_guest_network_interface['ip-addresses'] | selectattr('ip-address-type', 'eq', 'ipv4') | first)['ip-address'] }}"
-              user: "{{ item.ssh_user }}"
+              user: "{{ platform_ssh_user }}"
               port: 22
               identity_file: "{{ molecule_ephemeral_directory }}/id_ed25519"
           loop: "{{ molecule_yml.platforms }}"
