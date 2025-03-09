@@ -18,6 +18,7 @@
     default_ram_mib: "{{ driver_defaults.ram_mib | default(undef('Platform ram_mib must be specified')) }}"
     default_vcpus: "{{ driver_defaults.vcpus | default(undef('Platform vcpus must be specified')) }}"
     default_disk_size: "{{ driver_defaults.disk_size | default(undef()) }}"
+    default_user_data: "{{ driver_defaults.user_data | default('') }}"
 
     platform_disk_file_path: "{{ item.disk_file_path | default(default_disk_file_path) }}"
     platform_os_id: "{{ item.os_id | default(default_os_id) }}"
@@ -25,6 +26,7 @@
     platform_ram_mib: "{{ item.ram_mib | default(default_ram_mib) }}"
     platform_vcpus: "{{ item.vcpus | default(default_vcpus) }}"
     platform_disk_size: "{{ item.disk_size | default(default_disk_size) }}"
+    platform_user_data: "{{ item.user_data | default(default_user_data) }}"
   tasks:
     - name: Create VMs directory
       ansible.builtin.file:
@@ -113,7 +115,7 @@
 
     - name: Create VM Cloud-Init user-data
       ansible.builtin.copy:
-        content: "{{ item.user_data | default('') }}"
+        content: "{{ platform_user_data }}"
         dest: "{{ vms_dir }}/{{ item.name }}/CIDATA/user-data"
         mode: "0644"
       loop: "{{ molecule_yml.platforms }}"

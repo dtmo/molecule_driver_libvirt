@@ -91,6 +91,11 @@
                     "type": "string",
                     "title": "Disk size",
                     "description": "The size of the disk as a number and unit, such as `100G`. Valid units are: `b` or `bytes` for bytes, `KB` for kilobytes, `KiB` for kibibytes, `MB` for megabytes, `M` or `MiB` for mebibytes, `GB` for gigabytes, `G` or `GiB` for gibibytes, `TB` for terabytes, `T` or `TiB` for tebibytes."
+                },
+                "user_data": {
+                    "type": "string",
+                    "title": "Cloud-init user data",
+                    "description": "Cloud-init user data to pass through to the virtual machine guest OS."
                 }
             },
             "additionalProperties": false
