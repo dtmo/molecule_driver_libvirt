@@ -54,8 +54,11 @@ This driver has some specific requirements for VM images that it uses.
   See also:
   <https://www.qemu.org/docs/master/system/vm-templating.html#security-alert>
 
-An example image that meets the above criteria may be produced with the Packer
-configuration found in: <https://github.com/dtmo/molecule_ubuntu_2404>.
+Example images that meet the above criteria may be produced with the Packer
+configurations found at:
+
+* <https://github.com/dtmo/molecule_rocky_9>
+* <https://github.com/dtmo/molecule_ubuntu_2404>.
 
 ## Configuration
 
