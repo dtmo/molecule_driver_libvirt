@@ -49,8 +49,10 @@ This driver has some specific requirements for VM images that it uses.
   For Linux machines this may mean setting systemd files appropriately for
   [First Boot Semantics](https://www.freedesktop.org/software/systemd/man/latest/machine-id.html#First%20Boot%20Semantics). For a Windows guest this would be having
   performed a Sysprep generalize. Similarly, Cloud-init must have been cleaned
-  so that it performs initialization. See also:
-  https://www.qemu.org/docs/master/system/vm-templating.html#security-alert
+  so that it performs initialization.
+
+  See also:
+  <https://www.qemu.org/docs/master/system/vm-templating.html#security-alert>
 
 An example image that meets the above criteria may be produced with the Packer
 configuration found in: <https://github.com/dtmo/molecule_ubuntu_2404>.
