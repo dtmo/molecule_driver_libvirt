@@ -120,7 +120,6 @@ Each platform has the following configuration properties:
 ```yaml
 driver:
   name: molecule_libvirt
-  libvirt_uri: qemu+libssh2://user@host/system?known_hosts=/home/user/.ssh/known_hosts
   defaults:
     disk_file_path: "{{ ubuntu_2404_qcow2_image_path }}"
     os_id: http://ubuntu.com/ubuntu/24.04
