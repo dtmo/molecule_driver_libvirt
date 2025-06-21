@@ -16,32 +16,21 @@
 
     - name: Clear away VM
       block:
-        - name: Request VM guest OS to shut down
+        - name: Shut down VM
           community.libvirt.virt:
             name: "{{ molecule_state.run_uuid }}_{{ item }}"
-            state: shutdown
+            state: destroyed
           when: (molecule_state.run_uuid + "_" + item) in list_vms_result.list_vms
           loop: "{{ groups['all'] }}"
 
-        - name: Wait for VM guest OS to shut down
-          community.libvirt.virt:
-            command: status
-            name: "{{ molecule_state.run_uuid }}_{{ item }}"
-          when: (molecule_state.run_uuid + "_" + item) in list_vms_result.list_vms
-          register: vm_status_result
-          until: vm_status_result.status == "shutdown"
-          retries: 60
-          delay: 1
-          loop: "{{ groups['all'] }}"
-
-      always:
-        - name: Undefine VM
+        - name: Remove VM
           community.libvirt.virt:
             name: "{{ molecule_state.run_uuid }}_{{ item }}"
             command: undefine
           when: (molecule_state.run_uuid + "_" + item) in list_vms_result.list_vms
           loop: "{{ groups['all'] }}"
 
+      always:
         - name: Delete VM directory
           ansible.builtin.file:
             path: "{{ vms_dir }}/{{ item }}"
