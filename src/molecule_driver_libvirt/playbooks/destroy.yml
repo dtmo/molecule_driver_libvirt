@@ -39,7 +39,6 @@
           community.libvirt.virt:
             name: "{{ molecule_state.run_uuid }}_{{ item }}"
             command: undefine
-            force: true
           when: (molecule_state.run_uuid + "_" + item) in list_vms_result.list_vms
           loop: "{{ groups['all'] }}"
 
