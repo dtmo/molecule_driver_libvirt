@@ -138,7 +138,7 @@
       community.libvirt.virt:
         uri: "{{ libvirt_uri }}"
         command: define
-        xml: "{{ lookup('template', 'domain.xml.j2') }}"
+        xml: "{{ lookup('ansible.builtin.template', 'domain.xml.j2') }}"
       vars:
         domain_name: "{{ molecule_state.run_uuid }}_{{ item.name }}"
         domain_metadata_os_id: "{{ platform_os_id }}"
@@ -241,7 +241,7 @@
 
     - name: Create instance config
       block:
-        - name: Populate instance config dict  # noqa jinja
+        - name: Populate instance config dict # noqa jinja
           ansible.builtin.set_fact:
             instance_conf_dict:
               instance: "{{ item.name }}"
