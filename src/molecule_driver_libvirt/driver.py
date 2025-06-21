@@ -120,7 +120,7 @@ class Libvirt(Driver):
             Dictionary of options related to ansible connection to the instance.
         """
         # list of tuples describing mappable instance params and default values
-        instance_params = [
+        instance_params: list[tuple[str, Any]] = [
             ("become_pass", None),
             ("become_method", False),
             ("winrm_transport", None),
@@ -132,24 +132,24 @@ class Libvirt(Driver):
         ]
         if self.managed:
             try:
-                d = self._get_instance_config(instance_name)
-                conn_dict = {}
+                instance_config: dict[str, Any] = self._get_instance_config(instance_name)
+                conn_dict: dict[str, str] = {}
                 # Check if optional mappable params are in the instance config
                 for i in instance_params:
-                    if d.get(i[0], i[1]):
-                        conn_dict["ansible_" + i[0]] = d.get(i[0], i[1])
+                    if instance_config.get(i[0], i[1]):
+                        conn_dict["ansible_" + i[0]] = instance_config.get(i[0], i[1])
 
-                conn_dict["ansible_user"] = d.get("user")
-                conn_dict["ansible_host"] = d.get("address")
-                conn_dict["ansible_port"] = d.get("port")
+                conn_dict["ansible_user"] = str(instance_config.get("user"))
+                conn_dict["ansible_host"] = str(instance_config.get("address"))
+                conn_dict["ansible_port"] = str(instance_config.get("port"))
 
-                if d.get("identity_file", None):
-                    conn_dict["ansible_private_key_file"] = d.get("identity_file")
-                if d.get("password", None):
-                    conn_dict["ansible_password"] = d.get("password")
+                if instance_config.get("identity_file", None):
+                    conn_dict["ansible_private_key_file"] = str(instance_config.get("identity_file"))
+                if instance_config.get("password", None):
+                    conn_dict["ansible_password"] = str(instance_config.get("password"))
                     # Based on testinfra documentation, ansible password must be passed via ansible_ssh_pass
                     # issue to fix this can be found https://github.com/pytest-dev/pytest-testinfra/issues/580
-                    conn_dict["ansible_ssh_pass"] = d.get("password")
+                    conn_dict["ansible_ssh_pass"] = str(instance_config.get("password"))
 
                 conn_dict["ansible_ssh_common_args"] = " ".join(
                     self.ssh_connection_options,
