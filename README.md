@@ -30,6 +30,22 @@ pip install git+https://github.com/dtmo/molecule_driver_libvirt.git ansible-lint
 molecule --version
 ```
 
+### Fedora 42 Set Up
+
+```bash
+sudo dnf install -y \
+    gcc \
+    git \
+    libvirt-client-qemu \
+    libvirt-devel \
+    python3-devel \
+    python3-libvirt \
+    python3-pip \
+    python3-venv \
+    virt-manager \
+    xorriso
+```
+
 ## Compatible VM Images
 
 This driver has some specific requirements for VM images that it uses.

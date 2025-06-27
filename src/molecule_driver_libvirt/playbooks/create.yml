@@ -4,6 +4,10 @@
   hosts: localhost
   connection: local
   vars:
+    os_family_libvirt_users:
+      Debian: libvirt-qemu
+      RedHat: qemu
+    libvirt_user: "{{ os_family_libvirt_users[ansible_os_family] }}"
     vms_dir: "{{ molecule_ephemeral_directory }}/vms"
     molecule_state: "{{ lookup('file', '/'.join([molecule_ephemeral_directory, 'state.yml'])) | from_yaml }}"
     guest_network_interfaces: "{{ (guest_network_get_interfaces_result.results[index].stdout | from_json).return }}"
@@ -36,10 +40,10 @@
         mode: "0755"
       loop: "{{ molecule_yml.platforms }}"
 
-    - name: Grant libvirt-qemu search permission on VMs dir
+    - name: Grant libvirt user search permission on VMs dir
       ansible.posix.acl:
         path: "/{{ vms_dir.split('/')[1 : index + (lookup('ansible.builtin.env', 'HOME').split('/') | length)] | join('/') }}"
-        entity: libvirt-qemu
+        entity: "{{ libvirt_user }}"
         etype: user
         permissions: x
         state: present
@@ -55,10 +59,10 @@
         mode: "0755"
       loop: "{{ molecule_yml.platforms }}"
 
-    - name: Grant libvirt-qemu search permission on VM directory
+    - name: Grant libvirt user search permission on VM directory
       ansible.posix.acl:
         path: "{{ vms_dir }}/{{ item.name }}"
-        entity: libvirt-qemu
+        entity: "{{ libvirt_user }}"
         etype: user
         permissions: x
         state: present
